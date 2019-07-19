@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from torchvision import transforms
 from torch.utils.tensorboard import SummaryWriter
-
 from bindsnet import ROOT_DIR
 from bindsnet.datasets import MNIST, DataLoader
 from bindsnet.encoding import PoissonEncoder
@@ -16,6 +15,8 @@ from bindsnet.network.monitors import Monitor
 from bindsnet.utils import get_square_weights
 from bindsnet.analysis.plotting import plot_spikes, plot_weights
 from bindsnet.evaluation import all_activity, proportion_weighting, assign_labels
+
+from snn_minibatch.util import colorize
 
 
 def main(args):
@@ -67,9 +68,6 @@ def main(args):
     proportions = torch.zeros(args.n_neurons, n_classes)
     rates = torch.zeros(args.n_neurons, n_classes)
 
-    # Sequence of accuracy estimates.
-    accuracy = {"all": [], "proportion": []}
-
     # Set up monitors for spikes and voltages
     spikes = {}
     for layer in set(network.layers):
@@ -85,7 +83,6 @@ def main(args):
     # Summary writer.
     writer = SummaryWriter(log_dir=args.log_dir, flush_secs=10)
 
-    steps_per_epoch = 60000 // args.batch_size + 1 * (60000 % args.batch_size > 1)
     for epoch in range(args.n_epochs):
         labels = []
 
@@ -119,19 +116,33 @@ def main(args):
                     n_labels=n_classes,
                 )
 
+                global_step = 60000 * epoch + args.batch_size * step
+
                 writer.add_scalar(
                     tag="accuracy/all vote",
                     scalar_value=torch.mean(
                         (label_tensor.long() == all_activity_pred).float()
                     ),
-                    global_step=epoch * steps_per_epoch + step,
+                    global_step=global_step,
                 )
                 writer.add_scalar(
                     tag="accuracy/proportion weighting",
                     scalar_value=torch.mean(
                         (label_tensor.long() == proportion_pred).float()
                     ),
-                    global_step=epoch * steps_per_epoch + step,
+                    global_step=global_step,
+                )
+
+                square_weights = get_square_weights(
+                    network.connections["X", "Y"].w.view(784, args.n_neurons), n_sqrt, 28
+                )
+                img_tensor = colorize(square_weights, cmap="hot_r")
+
+                writer.add_image(
+                    tag="weights",
+                    img_tensor=img_tensor,
+                    global_step=global_step,
+                    dataformats="HWC",
                 )
 
                 # Assign labels to excitatory layer neurons.
@@ -153,13 +164,13 @@ def main(args):
             s = spikes["Y"].get("s").permute((1, 0, 2))
             spike_record[
                 (step * args.batch_size)
-                % update_interval : (step * args.batch_size % update_interval)
+                % update_interval: (step * args.batch_size % update_interval)
                 + s.size(0)
             ] = s
 
             # Plot simulation data.
             if args.plot:
-                input_exc_weights = network.connections[("X", "Y")].w
+                input_exc_weights = network.connections["X", "Y"].w
                 square_weights = get_square_weights(
                     input_exc_weights.view(784, args.n_neurons), n_sqrt, 28
                 )

@@ -10,6 +10,7 @@ torch = "*"
 bindsnet = {editable = true,path = "/home/dan/code/bindsnet"}
 tb-nightly = "*"
 future = "*"
+tensorflow = "==2.0.0b1"
 
 [requires]
 python_version = "3.6"
