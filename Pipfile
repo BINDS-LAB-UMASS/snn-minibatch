@@ -8,8 +8,8 @@ verify_ssl = true
 [packages]
 torch = "*"
 bindsnet = {editable = true,path = "/home/dan/code/bindsnet"}
-tensorboard = "==1.13.1"
-tensorflow = "==1.13.1"
+tb-nightly = "*"
+future = "*"
 
 [requires]
 python_version = "3.6"

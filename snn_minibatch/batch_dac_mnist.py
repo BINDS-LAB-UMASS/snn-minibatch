@@ -35,13 +35,13 @@ def main(args):
 
     # Build network.
     network = DiehlAndCook2015v2(
-        n_inpt=784,
+        n_input=784,
         n_neurons=args.n_neurons,
         inh=args.inh,
         dt=args.dt,
         norm=78.4,
         nu=(1e-4, 1e-2),
-        reduction=lambda inputs, dim=0: torch.max(inputs, dim=dim)[0],
+        reduction=torch.sum,
         theta_plus=args.theta_plus,
         input_shape=(1, 28, 28),
     )
@@ -83,7 +83,7 @@ def main(args):
     spike_record = torch.zeros(update_interval, args.time, args.n_neurons)
 
     # Summary writer.
-    writer = SummaryWriter(log_dir=args.log_dir)
+    writer = SummaryWriter(log_dir=args.log_dir, flush_secs=10)
 
     steps_per_epoch = 60000 // args.batch_size + 1 * (60000 % args.batch_size > 1)
     for epoch in range(args.n_epochs):
@@ -100,9 +100,9 @@ def main(args):
 
         for step, batch in enumerate(tqdm(dataloader)):
             # Get next input sample.
-            inpts = {"X": batch["encoded_image"]}
+            inputs = {"X": batch["encoded_image"]}
             if args.gpu:
-                inpts = {k: v.cuda() for k, v in inpts.items()}
+                inputs = {k: v.cuda() for k, v in inputs.items()}
 
             if step % args.update_steps == 0 and step > 0:
                 # Convert the array of labels into a tensor
@@ -147,7 +147,7 @@ def main(args):
             labels.extend(batch["label"].tolist())
 
             # Run the network on the input.
-            network.run(inpts=inpts, time=args.time)
+            network.run(inputs=inputs, time=args.time)
 
             # Add to spikes recording.
             s = spikes["Y"].get("s").permute((1, 0, 2))
@@ -182,10 +182,8 @@ def parse_args():
     parser.add_argument("--n-neurons", type=int, default=100)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--n-epochs", type=int, default=1)
-    parser.add_argument("--n-test", type=int, default=10000)
     parser.add_argument("--n-workers", type=int, default=-1)
     parser.add_argument("--update-steps", type=int, default=25)
-    parser.add_argument("--exc", type=float, default=22.5)
     parser.add_argument("--inh", type=float, default=120)
     parser.add_argument("--theta_plus", type=float, default=0.05)
     parser.add_argument("--time", type=int, default=100)

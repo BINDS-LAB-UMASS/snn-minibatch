@@ -38,11 +38,11 @@ def main(args):
     # Generate random Poisson spike trains with firing rates in [0Hz, 120Hz].
     datum = 120 * torch.rand(args.batch_size, args.n_input)
     input_spikes = bindsnet.encoding.poisson(datum=datum, time=args.time)
-    inpts = {"I": input_spikes}
+    inputs = {"I": input_spikes}
     t2 = time() - t1 - t0
 
     # Simulate network on input spikes.
-    network.run(inpts=inpts, time=args.time)
+    network.run(inputs=inputs, time=args.time)
     t3 = time() - t2 - t1 - t0
 
     # Report simulation wall-clock time.
