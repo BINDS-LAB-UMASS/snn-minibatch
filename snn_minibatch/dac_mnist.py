@@ -1,5 +1,6 @@
 import os
 import argparse
+from time import time
 
 import torch
 import numpy as np
@@ -36,7 +37,7 @@ def main(args):
 
     # Build network.
     network = DiehlAndCook2015v2(
-        n_input=784,
+        n_inpt=784,
         n_neurons=args.n_neurons,
         inh=args.inh,
         dt=args.dt,
@@ -44,7 +45,7 @@ def main(args):
         nu=(1e-4, 1e-2),
         reduction=torch.sum,
         theta_plus=args.theta_plus,
-        input_shape=(1, 28, 28),
+        inpt_shape=(1, 28, 28),
     )
 
     # Directs network to GPU
@@ -96,10 +97,7 @@ def main(args):
         )
 
         for step, batch in enumerate(tqdm(dataloader)):
-            # Get next input sample.
-            inputs = {"X": batch["encoded_image"]}
-            if args.gpu:
-                inputs = {k: v.cuda() for k, v in inputs.items()}
+            global_step = 60000 * epoch + args.batch_size * step
 
             if step % args.update_steps == 0 and step > 0:
                 # Convert the array of labels into a tensor
@@ -115,8 +113,6 @@ def main(args):
                     proportions=proportions,
                     n_labels=n_classes,
                 )
-
-                global_step = 60000 * epoch + args.batch_size * step
 
                 writer.add_scalar(
                     tag="accuracy/all vote",
@@ -134,7 +130,9 @@ def main(args):
                 )
 
                 square_weights = get_square_weights(
-                    network.connections["X", "Y"].w.view(784, args.n_neurons), n_sqrt, 28
+                    network.connections["X", "Y"].w.view(784, args.n_neurons),
+                    n_sqrt,
+                    28,
                 )
                 img_tensor = colorize(square_weights, cmap="hot_r")
 
@@ -157,16 +155,27 @@ def main(args):
 
             labels.extend(batch["label"].tolist())
 
+            # Prep next input batch.
+            inpts = {"X": batch["encoded_image"]}
+            if args.gpu:
+                inpts = {k: v.cuda() for k, v in inpts.items()}
+
             # Run the network on the input.
-            network.run(inputs=inputs, time=args.time)
+            t0 = time()
+            network.run(inpts=inpts, time=args.time)
+            t1 = time() - t0
 
             # Add to spikes recording.
             s = spikes["Y"].get("s").permute((1, 0, 2))
             spike_record[
                 (step * args.batch_size)
-                % update_interval: (step * args.batch_size % update_interval)
+                % update_interval : (step * args.batch_size % update_interval)
                 + s.size(0)
             ] = s
+
+            writer.add_scalar(
+                tag="time/simulation", scalar_value=t1, global_step=global_step
+            )
 
             # Plot simulation data.
             if args.plot:

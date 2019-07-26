@@ -28,7 +28,7 @@ def colorize(value, vmin=None, vmax=None, cmap=None):
         value = (value - vmin) / (vmax - vmin)  # vmin..vmax
     else:
         # Avoid 0-division
-        value = value * 0.
+        value = value * 0.0
     # squeeze last dim if it exists
     value = value.squeeze()
 

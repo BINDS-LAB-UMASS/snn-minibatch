@@ -151,13 +151,13 @@ for epoch in range(n_epochs):
     for step, batch in enumerate(tqdm(train_dataloader)):
         # Get next input sample.
 
-        inputs = {"X": batch["encoded_image"]}
+        inpts = {"X": batch["encoded_image"]}
         if gpu:
-            inputs = {k: v.cuda() for k, v in inputs.items()}
+            inpts = {k: v.cuda() for k, v in inpts.items()}
         label = batch["label"]
 
         # Run the network on the input.
-        network.run(inputs=inputs, time=time, input_time_dim=0)
+        network.run(inpts=inpts, time=time, input_time_dim=0)
 
         # Optionally plot various simulation information.
         if plot:
