@@ -1,0 +1,2 @@
+seed,input neurons,output neurons,time,batch size,init time,data generation time,simulation time
+0,100,100,1000,1,0.00025272369384765625,4.76837158203125e-05,0.1336045265197754

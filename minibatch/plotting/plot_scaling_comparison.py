@@ -45,7 +45,9 @@ def main(args):
 
     colors = ["b", "b", "r", "r", "g", "g"]
 
-    for label, linestyle, color, file_name in zip(labels, linestyles, colors, file_names):
+    for label, linestyle, color, file_name in zip(
+        labels, linestyles, colors, file_names
+    ):
         results_file = os.path.join(ROOT_DIR, "results", "scaling", file_name)
         results_path = os.path.join(ROOT_DIR, "results", "scaling", results_file)
 
@@ -67,7 +69,7 @@ def main(args):
     plt.xlabel("Batch size")
     plt.ylabel("Wall clock time (s)")
     plt.ioff()
-    plt.legend(prop={'size': 10})
+    plt.legend(prop={"size": 10})
     plt.tight_layout()
 
     path = os.path.join(ROOT_DIR, "figures", "scaling")

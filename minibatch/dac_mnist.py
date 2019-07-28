@@ -17,7 +17,7 @@ from bindsnet.utils import get_square_weights
 from bindsnet.analysis.plotting import plot_spikes, plot_weights
 from bindsnet.evaluation import all_activity, proportion_weighting, assign_labels
 
-from snn_minibatch.util import colorize
+from minibatch.util import colorize
 
 
 def main(args):

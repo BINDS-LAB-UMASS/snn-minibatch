@@ -7,7 +7,7 @@ import bindsnet
 import matplotlib.pyplot as plt
 
 from bindsnet.learning import PostPre
-from snn_minibatch import ROOT_DIR
+from minibatch import ROOT_DIR
 
 
 def main(args):
