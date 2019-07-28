@@ -1,3 +1,4 @@
+import torch
 from matplotlib import cm
 
 
@@ -35,3 +36,7 @@ def colorize(value, vmin=None, vmax=None, cmap=None):
     cmapper = cm.get_cmap(cmap)
     value = cmapper(value, bytes=True)
     return value
+
+
+def max_without_indices(inputs, dim=0):
+    return torch.max(inputs, dim=dim)[0]
