@@ -1,8 +1,7 @@
 import argparse
 import os
 
-import torch
-import cpuinfo
+import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -62,8 +61,6 @@ def main(args):
         plt.xticks(x, x)
 
     plt.title(f"Scaling comparison")
-
-    import numpy as np
 
     plt.ylim([0.25, 2])
     plt.yticks(np.linspace(0.25, 2, 8), np.linspace(0.25, 2, 8))
