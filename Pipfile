@@ -16,6 +16,7 @@ seaborn = "*"
 pandas = "*"
 matplotlib = "*"
 py-cpuinfo = "*"
+numpy = "*"
 
 [requires]
 python_version = "3.6"
