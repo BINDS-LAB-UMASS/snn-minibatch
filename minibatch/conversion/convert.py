@@ -79,6 +79,7 @@ def main(args):
     )
 
     correct = 0
+    t0 = time()
     for step, batch in enumerate(tqdm(dataloader)):
         # Prep next input batch.
         inputs = batch["encoded_image"]
@@ -89,9 +90,7 @@ def main(args):
             inpts = {k: v.cuda() for k, v in inpts.items()}
 
         # Run the network on the input.
-        t0 = time()
         snn.run(inpts=inpts, time=args.time)
-        t1 = time() - t0
 
         spikes = {layer: monitor.get("s") for layer, monitor in snn.monitors.items()}
         voltages = {layer: monitor.get("v") for layer, monitor in snn.monitors.items()}
@@ -107,12 +106,31 @@ def main(args):
             spike_ims, spike_axes = plot_spikes(spikes, ims=spike_ims, axes=spike_axes)
             plt.pause(1e-3)
 
+    t1 = time() - t0
+
     print(f"SNN accuracy: {100 * correct / len(dataloader.dataset):.2f}")
+
+    path = os.path.join(ROOT_DIR, "results", args.results_file)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    if not os.path.isfile(path):
+        with open(os.path.join(path), "w") as f:
+            f.write("seed,simulation time,batch size,inference time\n")
+
+    to_write = [
+        args.seed,
+        args.time,
+        args.batch_size,
+        t1,
+    ]
+    to_write = ",".join(map(str, to_write)) + "\n"
+    with open(os.path.join(path), "a") as f:
+        f.write(to_write)
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--job-dir", type=str, required=True)
+    parser.add_argument("--results-file", type=str, required=True)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--time", type=int, default=100)
     parser.add_argument("--batch-size", type=int, default=100)

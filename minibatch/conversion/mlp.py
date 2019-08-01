@@ -3,7 +3,7 @@ import torch.nn as nn
 
 class MLP(nn.Module):
     """A simple 3-layer multi-layer perceptron with ReLU nonlinearities."""
-     
+
     def __init__(self):
         super(MLP, self).__init__()
 
