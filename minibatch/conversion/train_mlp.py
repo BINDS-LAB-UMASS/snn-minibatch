@@ -61,19 +61,26 @@ def main(args):
     ann = MLP().to(device)
 
     # Specify optimizer and loss function.
-    optimizer = optim.Adam(params=ann.parameters(), lr=1e-3)
+    optimizer = optim.Adam(params=ann.parameters(), lr=5e-4)
     criterion = nn.CrossEntropyLoss()
 
     # Train / test the ANN.
+    best_accuracy = -np.inf
     for epoch in range(1, args.n_epochs + 1):
 
         # Training.
         ann.train()
+        correct = 0
         for batch_idx, (data, target) in enumerate(train_loader):
             data, target = data.to(device), target.to(device)
             optimizer.zero_grad()
             output = ann(data)
             loss = criterion(output, target)
+
+            # Get the index of the max log-probability.
+            pred = output.argmax(dim=1, keepdim=True)
+            correct += pred.eq(target.view_as(pred)).sum().item()
+
             loss.backward()
             optimizer.step()
             if batch_idx % 10 == 0:
@@ -86,6 +93,12 @@ def main(args):
                         loss.item(),
                     )
                 )
+
+        print(
+            "\nTrain accuracy: {:.2f}%".format(
+                100.0 * correct / len(train_loader.dataset)
+            )
+        )
 
         # Testing.
         ann.eval()
@@ -102,26 +115,23 @@ def main(args):
                 test_loss += criterion(output, target).item()
 
                 # Get the index of the max log-probability.
-                pred = output.argmax(
-                    dim=1, keepdim=True
-                )
+                pred = output.argmax(dim=1, keepdim=True)
                 correct += pred.eq(target.view_as(pred)).sum().item()
 
         test_loss /= len(test_loader.dataset)
 
+        accuracy = 100.0 * correct / len(test_loader.dataset)
+        if accuracy > best_accuracy:
+            # Save model to disk.
+            f = os.path.join(args.job_dir, "ann.pt")
+            os.makedirs(os.path.dirname(f), exist_ok=True)
+            torch.save(ann.state_dict(), f=f)
+
         print(
-            "\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n".format(
-                test_loss,
-                correct,
-                len(test_loader.dataset),
-                100.0 * correct / len(test_loader.dataset),
+            "\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n".format(
+                test_loss, correct, len(test_loader.dataset), accuracy
             )
         )
-
-    # Save model to disk.
-    f = os.path.join(args.job_dir, "ann.pt")
-    os.makedirs(os.path.dirname(f), exist_ok=True)
-    torch.save(ann.state_dict(), f=f)
 
 
 def parse_args():

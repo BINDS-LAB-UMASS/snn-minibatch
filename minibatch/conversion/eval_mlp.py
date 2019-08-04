@@ -57,13 +57,11 @@ def main(args):
             output = ann(data)
 
             # Get the index of the max log-probability.
-            pred = output.argmax(
-                dim=1, keepdim=True
-            )
+            pred = output.argmax(dim=1, keepdim=True)
             correct += pred.eq(target.view_as(pred)).sum().item()
 
     print(
-        "\nTest set: Accuracy: {}/{} ({:.0f}%)\n".format(
+        "\nTest set: Accuracy: {}/{} ({:.2f}%)\n".format(
             correct,
             len(test_loader.dataset),
             100.0 * correct / len(test_loader.dataset),

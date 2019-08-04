@@ -7,8 +7,8 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-from . import ROOT_DIR
-from .scaling import main as scaling
+from minibatch import ROOT_DIR
+from minibatch.scaling.scaling import main as scaling
 
 sns.set()
 

@@ -3,4 +3,3 @@ jobs/
 __pycache__/
 Pipfile.lock
 data/
-MNIST/

@@ -59,16 +59,6 @@ def main(args):
 
     print(snn)
 
-    for layer in snn.layers:
-        if layer != "Input":
-            snn.add_monitor(
-                Monitor(snn.layers[layer], state_vars=["s", "v"], time=args.time),
-                name=layer,
-            )
-
-    spike_ims = None
-    spike_axes = None
-
     # Create a dataloader to iterate and batch data
     dataloader = DataLoader(
         dataset,
@@ -92,39 +82,31 @@ def main(args):
         # Run the network on the input.
         snn.run(inpts=inpts, time=args.time)
 
-        spikes = {layer: monitor.get("s") for layer, monitor in snn.monitors.items()}
-        voltages = {layer: monitor.get("v") for layer, monitor in snn.monitors.items()}
-        output_voltages = voltages["5"]
-        prediction = torch.softmax(output_voltages.sum(dim=0), dim=1).argmax(dim=1)
+        output_voltages = snn.layers["5"].summed
+        prediction = torch.softmax(output_voltages, dim=1).argmax(dim=1)
         correct += (prediction.cpu() == labels).sum().item()
 
         # Reset state variables.
         snn.reset_()
 
-        if args.plot:
-            spikes = {k: spikes[k].cpu() for k in spikes}
-            spike_ims, spike_axes = plot_spikes(spikes, ims=spike_ims, axes=spike_axes)
-            plt.pause(1e-3)
-
     t1 = time() - t0
 
-    print(f"SNN accuracy: {100 * correct / len(dataloader.dataset):.2f}")
+    accuracy = 100 * correct / len(dataloader.dataset)
+
+    print(f"SNN accuracy: {accuracy:.2f}")
 
     path = os.path.join(ROOT_DIR, "results", args.results_file)
     os.makedirs(os.path.dirname(path), exist_ok=True)
     if not os.path.isfile(path):
         with open(os.path.join(path), "w") as f:
-            f.write("seed,simulation time,batch size,inference time\n")
+            f.write("seed,simulation time,batch size,inference time,accuracy\n")
 
-    to_write = [
-        args.seed,
-        args.time,
-        args.batch_size,
-        t1,
-    ]
+    to_write = [args.seed, args.time, args.batch_size, t1, accuracy]
     to_write = ",".join(map(str, to_write)) + "\n"
     with open(os.path.join(path), "a") as f:
         f.write(to_write)
+
+    return t1
 
 
 def parse_args():
@@ -136,7 +118,6 @@ def parse_args():
     parser.add_argument("--batch-size", type=int, default=100)
     parser.add_argument("--n-workers", type=int, default=-1)
     parser.add_argument("--gpu", action="store_true")
-    parser.add_argument("--plot", action="store_true")
     return parser.parse_args()
 
 

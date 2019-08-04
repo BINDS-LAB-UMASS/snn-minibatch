@@ -45,16 +45,16 @@ def max_without_indices(inputs, dim=0):
 
 class PoissonNodes(bindsnet.network.nodes.Nodes):
     def __init__(
-            self,
-            rates=None,
-            n=None,
-            shape=None,
-            traces=False,
-            traces_additive=False,
-            tc_trace=20.0,
-            trace_scale=1.0,
-            sum_input=False,
-            **kwargs,
+        self,
+        rates=None,
+        n=None,
+        shape=None,
+        traces=False,
+        traces_additive=False,
+        tc_trace=20.0,
+        trace_scale=1.0,
+        sum_input=False,
+        **kwargs,
     ) -> None:
         super().__init__(
             n=n,
@@ -79,7 +79,7 @@ class PoissonNodes(bindsnet.network.nodes.Nodes):
         :param x: Inputs to the layer (ignored, if any).
         """
         self.s = torch.random.rand(self.batch_size, *self.shape) < self.rates * (
-                self.dt / 1000
+            self.dt / 1000
         )
 
     def reset_(self) -> None:
