@@ -9,9 +9,7 @@ from tqdm import tqdm
 from torchvision import transforms
 from bindsnet.conversion import ann_to_snn
 from bindsnet.encoding import RepeatEncoder
-from bindsnet.network.monitors import Monitor
 from bindsnet.datasets import MNIST, DataLoader
-from bindsnet.analysis.plotting import plot_spikes
 
 from minibatch import ROOT_DIR
 from minibatch.conversion.mlp import MLP
@@ -80,7 +78,7 @@ def main(args):
             inpts = {k: v.cuda() for k, v in inpts.items()}
 
         # Run the network on the input.
-        snn.run(inpts=inpts, time=args.time)
+        snn.run(inpts=inpts, time=args.time, one_step=args.one_step)
 
         output_voltages = snn.layers["5"].summed
         prediction = torch.softmax(output_voltages, dim=1).argmax(dim=1)
@@ -118,6 +116,7 @@ def parse_args():
     parser.add_argument("--batch-size", type=int, default=100)
     parser.add_argument("--n-workers", type=int, default=-1)
     parser.add_argument("--gpu", action="store_true")
+    parser.add_argument("--one-step", action="store_true")
     return parser.parse_args()
 
 
