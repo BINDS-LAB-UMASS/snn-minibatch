@@ -113,8 +113,7 @@ if __name__ == "__main__":
         plt.legend(loc=2, fontsize=9)
         plt.xlabel("Simulated time (ms)")
         plt.ylabel("Wall-clock time (s)")
-        plt.title("Test set inference time: Simulated vs. wall-clock")
-        plt.ylim([0, 60 * 5])
+        plt.title("Test set inference time: simulated vs. wall-clock")
         plt.xticks(save_x, save_x)
 
     path = os.path.join(ROOT_DIR, "figures", "conversion")
@@ -136,31 +135,36 @@ if __name__ == "__main__":
             x = sorted(sim_time_mapping.keys())
             y = sorted(
                 [
-                    (10000 // batch_size) / stats[0]
+                    stats[0] / (10000 // batch_size)
                     for stats in sim_time_mapping.values()
                 ]
             )
-            # y_stdev = sorted(
-            #     1 * x
-            #     for (_, x) in zip(
-            #         [stats[0] for stats in sim_time_mapping.values()],
-            #         [stats[1] for stats in sim_time_mapping.values()],
-            #     )
-            # )
+            y_stdev = sorted(
+                1 * x
+                for (_, x) in zip(
+                    [
+                        stats[0] / (10000 // batch_size)
+                        for stats in sim_time_mapping.values()
+                    ],
+                    [
+                        stats[1] / (10000 // batch_size)
+                        for stats in sim_time_mapping.values()
+                    ],
+                )
+            )
             y = np.array(y)
             y_stdev = np.array(y_stdev)
             ax.loglog(x, y, label=batch_size)
-            # ax.fill_between(x, y1=y - y_stdev, y2=y + y_stdev, alpha=0.25)
+            ax.fill_between(x, y1=y - y_stdev, y2=y + y_stdev, alpha=0.25)
 
             if batch_size == 128:
                 save_x = x
 
         plt.ioff()
-        plt.legend(loc=2, fontsize=9)
+        plt.legend(loc="lower right", fontsize=9)
         plt.xlabel("Simulated time (ms)")
-        plt.ylabel("Wall-clock time (s)")
-        plt.title("Test set inference time: Simulated vs. wall-clock")
-        plt.ylim([0, 60 * 5])
+        plt.ylabel("Wall-clock time per batch (s)")
+        plt.title("Time per minibatch: simulated vs. wall-clock")
         plt.xticks(save_x, save_x)
 
     if args.gpu:

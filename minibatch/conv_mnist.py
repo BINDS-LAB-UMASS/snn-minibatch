@@ -159,7 +159,7 @@ def parse_args():
     parser.add_argument("--padding", type=int, default=0)
     parser.add_argument("--time", type=int, default=100)
     parser.add_argument("--dt", type=int, default=1.0)
-    parser.add_argument("--lr", type=float, default=0.05)
+    parser.add_argument("--lr", type=float, default=0.005)
     parser.add_argument("--intensity", type=float, default=128.0)
     parser.add_argument("--progress-interval", type=int, default=10)
     parser.add_argument("--train", dest="train", action="store_true")
