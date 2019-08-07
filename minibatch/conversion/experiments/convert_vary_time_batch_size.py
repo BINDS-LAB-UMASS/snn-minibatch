@@ -20,6 +20,7 @@ def parse_args():
     parser.add_argument("--batch-sizes", type=int, default=None, nargs="+")
     parser.add_argument("--n-workers", type=int, default=-1)
     parser.add_argument("--gpu", action="store_true")
+    parser.add_argument("--one-step", action="store_true")
     parser.add_argument("--skip-to-plot", action="store_true")
     return parser.parse_args()
 
@@ -28,7 +29,7 @@ if __name__ == "__main__":
     args = parse_args()
 
     if args.times is None:
-        args.times = [1, 5, 10, 25, 50]
+        args.times = [1, 2, 3, 4, 5, 10]
 
     if args.batch_sizes is None:
         args.batch_sizes = [2 ** i for i in range(11)]
@@ -140,17 +141,17 @@ if __name__ == "__main__":
                     for stats in sim_time_mapping.values()
                 ]
             )
-            # y_stdev = sorted(
-            #     1 * x
-            #     for (_, x) in zip(
-            #         [stats[0] for stats in sim_time_mapping.values()],
-            #         [stats[1] for stats in sim_time_mapping.values()],
-            #     )
-            # )
+            y_stdev = sorted(
+                1 * x
+                for (_, x) in zip(
+                    [stats[0] for stats in sim_time_mapping.values()],
+                    [stats[1] for stats in sim_time_mapping.values()],
+                )
+            )
             y = np.array(y)
             y_stdev = np.array(y_stdev)
             ax.loglog(x, y, label=batch_size)
-            # ax.fill_between(x, y1=y - y_stdev, y2=y + y_stdev, alpha=0.25)
+            ax.fill_between(x, y1=y - y_stdev, y2=y + y_stdev, alpha=0.25)
 
             if batch_size == 128:
                 save_x = x

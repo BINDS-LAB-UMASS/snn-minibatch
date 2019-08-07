@@ -4,7 +4,6 @@ from time import time
 
 import torch
 import numpy as np
-import matplotlib.pyplot as plt
 from tqdm import tqdm
 from torchvision import transforms
 from bindsnet.conversion import ann_to_snn
