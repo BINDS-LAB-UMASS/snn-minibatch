@@ -1,4 +1,5 @@
 import os
+import shutil
 import argparse
 from time import time
 
@@ -24,6 +25,7 @@ def main(args):
     update_interval = args.update_steps * args.batch_size
 
     # Sets up GPU use
+    torch.backends.cudnn.benchmark = False
     if args.gpu and torch.cuda.is_available():
         torch.cuda.manual_seed_all(args.seed)
     else:
@@ -102,10 +104,15 @@ def main(args):
     # Record spikes for length of update interval.
     spike_record = torch.zeros(update_interval, args.time, args.n_neurons)
 
+    if os.path.isdir(args.log_dir):
+        shutil.rmtree(args.log_dir)
+
     # Summary writer.
     writer = SummaryWriter(log_dir=args.log_dir, flush_secs=60)
 
     for epoch in range(args.n_epochs):
+        print(f"\nEpoch: {epoch}\n")
+
         labels = []
 
         # Create a dataloader to iterate and batch data
@@ -125,7 +132,9 @@ def main(args):
             pin_memory=args.gpu,
         )
 
-        for step, batch in enumerate(tqdm(dataloader)):
+        for step, batch in enumerate(dataloader):
+            print(f"Step: {step}")
+
             global_step = 60000 * epoch + args.batch_size * step
 
             if step % args.update_steps == 0 and step > 0:
@@ -190,9 +199,7 @@ def main(args):
                 inpts = {k: v.cuda() for k, v in inpts.items()}
 
             # Run the network on the input.
-            t0 = time()
             network.run(inpts=inpts, time=args.time, one_step=args.one_step)
-            t1 = time() - t0
 
             # Add to spikes recording.
             s = spikes["Y"].get("s").permute((1, 0, 2))

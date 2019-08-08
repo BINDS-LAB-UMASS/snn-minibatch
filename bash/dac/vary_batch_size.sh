@@ -1,6 +1,6 @@
-n_neurons=${1:-250}
+n_neurons=${1:-225}
 n_epochs=${2:-5}
-time=${3:-250}
+time=${3:-100}
 
 for seed in 0 1 2 3 4
 do
