@@ -17,7 +17,7 @@ from bindsnet.utils import get_square_weights
 from bindsnet.analysis.plotting import plot_spikes, plot_weights
 from bindsnet.evaluation import all_activity, proportion_weighting, assign_labels
 
-from minibatch.util import colorize
+from minibatch.util import colorize, max_without_indices
 
 
 def main(args):
@@ -35,6 +35,15 @@ def main(args):
 
     n_sqrt = int(np.ceil(np.sqrt(args.n_neurons)))
 
+    if args.reduction == "sum":
+        reduction = torch.sum
+    elif args.reduction == "mean":
+        reduction = torch.mean
+    elif args.reduction == "max":
+        reduction = max_without_indices
+    else:
+        raise NotImplementedError
+
     # Build network.
     network = DiehlAndCook2015v2(
         n_inpt=784,
@@ -43,7 +52,7 @@ def main(args):
         dt=args.dt,
         norm=78.4,
         nu=(1e-4, 1e-2),
-        reduction=torch.sum,
+        reduction=reduction,
         theta_plus=args.theta_plus,
         inpt_shape=(1, 28, 28),
     )
@@ -58,6 +67,18 @@ def main(args):
         None,
         root=os.path.join(ROOT_DIR, "data", "MNIST"),
         download=True,
+        train=True,
+        transform=transforms.Compose(
+            [transforms.ToTensor(), transforms.Lambda(lambda x: x * args.intensity)]
+        ),
+    )
+
+    test_dataset = MNIST(
+        PoissonEncoder(time=args.time, dt=args.dt),
+        None,
+        root=os.path.join(ROOT_DIR, "data", "MNIST"),
+        download=True,
+        train=False,
         transform=transforms.Compose(
             [transforms.ToTensor(), transforms.Lambda(lambda x: x * args.intensity)]
         ),
@@ -82,7 +103,7 @@ def main(args):
     spike_record = torch.zeros(update_interval, args.time, args.n_neurons)
 
     # Summary writer.
-    writer = SummaryWriter(log_dir=args.log_dir, flush_secs=10)
+    writer = SummaryWriter(log_dir=args.log_dir, flush_secs=60)
 
     for epoch in range(args.n_epochs):
         labels = []
@@ -90,6 +111,14 @@ def main(args):
         # Create a dataloader to iterate and batch data
         dataloader = DataLoader(
             dataset,
+            batch_size=args.batch_size,
+            shuffle=True,
+            num_workers=args.n_workers,
+            pin_memory=args.gpu,
+        )
+
+        test_dataloader = DataLoader(
+            test_dataset,
             batch_size=args.batch_size,
             shuffle=True,
             num_workers=args.n_workers,
@@ -162,7 +191,7 @@ def main(args):
 
             # Run the network on the input.
             t0 = time()
-            network.run(inpts=inpts, time=args.time)
+            network.run(inpts=inpts, time=args.time, one_step=args.one_step)
             t1 = time() - t0
 
             # Add to spikes recording.
@@ -200,7 +229,8 @@ def parse_args():
     parser.add_argument("--log-dir", type=str, required=True)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--n-neurons", type=int, default=100)
-    parser.add_argument("--batch-size", type=int, default=32)
+    parser.add_argument("--batch-size", type=int, default=16)
+    parser.add_argument("--reduction", type=str, default="sum")
     parser.add_argument("--n-epochs", type=int, default=1)
     parser.add_argument("--n-workers", type=int, default=-1)
     parser.add_argument("--update-steps", type=int, default=25)
@@ -210,9 +240,9 @@ def parse_args():
     parser.add_argument("--dt", type=int, default=1.0)
     parser.add_argument("--intensity", type=float, default=128)
     parser.add_argument("--progress-interval", type=int, default=10)
-    parser.add_argument("--test", dest="train", action="store_true")
-    parser.add_argument("--plot", dest="plot", action="store_true")
-    parser.add_argument("--gpu", dest="gpu", action="store_true")
+    parser.add_argument("--plot", action="store_true")
+    parser.add_argument("--gpu", action="store_true")
+    parser.add_argument("--one-step", action="store_true")
     return parser.parse_args()
 
 
