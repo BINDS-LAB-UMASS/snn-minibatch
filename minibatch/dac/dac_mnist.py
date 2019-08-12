@@ -21,6 +21,9 @@ from minibatch.util import colorize, max_without_indices
 
 
 def main(args):
+    if args.update_steps is None:
+        args.update_steps = max(250 // args.batch_size, 1)
+
     update_interval = args.update_steps * args.batch_size
 
     # Sets up GPU use
@@ -233,7 +236,7 @@ def parse_args():
     parser.add_argument("--reduction", type=str, default="sum")
     parser.add_argument("--n-epochs", type=int, default=1)
     parser.add_argument("--n-workers", type=int, default=-1)
-    parser.add_argument("--update-steps", type=int, default=25)
+    parser.add_argument("--update-steps", type=int, default=None)
     parser.add_argument("--inh", type=float, default=120)
     parser.add_argument("--theta_plus", type=float, default=0.05)
     parser.add_argument("--time", type=int, default=100)

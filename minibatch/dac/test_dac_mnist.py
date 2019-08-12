@@ -17,7 +17,7 @@ from bindsnet.utils import get_square_weights
 from bindsnet.analysis.plotting import plot_spikes, plot_weights
 from bindsnet.evaluation import all_activity, proportion_weighting, assign_labels
 
-from minibatch.util import colorize, max_without_indices, max_output
+from minibatch.util import colorize, max_without_indices
 
 
 def main(args):
@@ -42,8 +42,6 @@ def main(args):
         reduction = torch.mean
     elif args.reduction == "max":
         reduction = max_without_indices
-    elif args.reduction == "output":
-        reduction = max_output
     else:
         raise NotImplementedError
 

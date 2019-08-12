@@ -43,12 +43,6 @@ def max_without_indices(inputs, dim=0):
     return torch.max(inputs, dim=dim)[0]
 
 
-def max_output(inputs, dim=0):
-    print(inputs.sum(dim=1, keepdim=True).size())
-    print(torch.max(inputs.sum(dim=1, keepdim=True), dim=dim)[1].size())
-    return torch.max(inputs.sum(dim=2), dim=dim)[0]
-
-
 class PoissonNodes(bindsnet.network.nodes.Nodes):
     def __init__(
         self,
