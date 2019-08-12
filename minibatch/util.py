@@ -27,7 +27,7 @@ def colorize(value, vmin=None, vmax=None, cmap=None):
     vmin = value.min() if vmin is None else vmin
     vmax = value.max() if vmax is None else vmax
     if vmin != vmax:
-        value = (value - vmin) / (vmax - vmin)  # vmin..vmax
+        value = (value - vmin) / (vmax - vmin)
     else:
         # Avoid 0-division
         value = value * 0.0
@@ -41,6 +41,12 @@ def colorize(value, vmin=None, vmax=None, cmap=None):
 
 def max_without_indices(inputs, dim=0):
     return torch.max(inputs, dim=dim)[0]
+
+
+def max_output(inputs, dim=0):
+    print(inputs.sum(dim=1, keepdim=True).size())
+    print(torch.max(inputs.sum(dim=1, keepdim=True), dim=dim)[1].size())
+    return torch.max(inputs.sum(dim=2), dim=dim)[0]
 
 
 class PoissonNodes(bindsnet.network.nodes.Nodes):

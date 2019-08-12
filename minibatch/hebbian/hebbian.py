@@ -65,9 +65,7 @@ def main(args):
 
     # Build network.
     network = Network(batch_size=args.batch_size)
-    network.add_layer(
-        Input(shape=(1, 28, 28), traces=True), name="I"
-    )
+    network.add_layer(Input(shape=(1, 28, 28), traces=True), name="I")
     network.add_layer(
         LIFNodes(n=10, traces=True, rest=0, reset=0, thresh=1, refrac=0), name="O"
     )
@@ -102,10 +100,7 @@ def main(args):
         download=True,
         train=False,
         transform=transforms.Compose(
-            [
-                transforms.ToTensor(),
-                transforms.Lambda(lambda x: x * 250),
-            ]
+            [transforms.ToTensor(), transforms.Lambda(lambda x: x * 250)]
         ),
     )
 
@@ -147,9 +142,7 @@ def main(args):
 
         if args.plot:
             # Plot output spikes.
-            spikes = {
-                l: network.monitors[l].get("s")[:, 0] for l in network.monitors
-            }
+            spikes = {l: network.monitors[l].get("s")[:, 0] for l in network.monitors}
             spike_ims, spike_axes = plot_spikes(
                 spikes=spikes, ims=spike_ims, axes=spike_axes
             )
@@ -177,17 +170,11 @@ def main(args):
             inpts = {k: v.cuda() for k, v in inpts.items()}
 
         # Run the network on the input.
-        network.run(
-            inpts=inpts,
-            time=args.time,
-            one_step=args.one_step,
-        )
+        network.run(inpts=inpts, time=args.time, one_step=args.one_step)
 
         if args.plot:
             # Plot output spikes.
-            spikes = {
-                l: network.monitors[l].get("s")[:, 0] for l in network.monitors
-            }
+            spikes = {l: network.monitors[l].get("s")[:, 0] for l in network.monitors}
             spike_ims, spike_axes = plot_spikes(
                 spikes=spikes, ims=spike_ims, axes=spike_axes
             )

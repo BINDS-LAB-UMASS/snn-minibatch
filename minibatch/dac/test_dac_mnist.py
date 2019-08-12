@@ -17,7 +17,7 @@ from bindsnet.utils import get_square_weights
 from bindsnet.analysis.plotting import plot_spikes, plot_weights
 from bindsnet.evaluation import all_activity, proportion_weighting, assign_labels
 
-from minibatch.util import colorize, max_without_indices
+from minibatch.util import colorize, max_without_indices, max_output
 
 
 def main(args):
@@ -42,6 +42,8 @@ def main(args):
         reduction = torch.mean
     elif args.reduction == "max":
         reduction = max_without_indices
+    elif args.reduction == "output":
+        reduction = max_output
     else:
         raise NotImplementedError
 
@@ -52,13 +54,13 @@ def main(args):
         inh=args.inh,
         dt=args.dt,
         norm=78.4,
-        nu=(1e-4, 1e-2),
+        nu=(0.0, 1e-2),
         reduction=reduction,
         theta_plus=args.theta_plus,
         inpt_shape=(1, 28, 28),
     )
 
-    # Directs network to GPU
+    # Directs network to GPU.
     if args.gpu:
         network.to("cuda")
 
@@ -73,6 +75,8 @@ def main(args):
             [transforms.ToTensor(), transforms.Lambda(lambda x: x * args.intensity)]
         ),
     )
+
+    dataset, valid_dataset = torch.utils.data.random_split(dataset, [59000, 1000])
 
     test_dataset = MNIST(
         PoissonEncoder(time=args.time, dt=args.dt),
@@ -114,9 +118,9 @@ def main(args):
 
         labels = []
 
-        # Create a dataloader to iterate and batch data
+        # Get training data loader.
         dataloader = DataLoader(
-            dataset,
+            dataset=dataset,
             batch_size=args.batch_size,
             shuffle=True,
             num_workers=args.n_workers,
@@ -124,37 +128,99 @@ def main(args):
         )
 
         for step, batch in enumerate(dataloader):
-            print(f"Step: {step}")
+            print(f"Step: {step} / {len(dataloader)}")
 
             global_step = 60000 * epoch + args.batch_size * step
-
             if step % args.update_steps == 0 and step > 0:
-                # Convert the array of labels into a tensor
-                label_tensor = torch.tensor(labels)
+                # Disable learning.
+                network.train(False)
+
+                # Get test data loader.
+                valid_dataloader = DataLoader(
+                    dataset=valid_dataset,
+                    batch_size=args.test_batch_size,
+                    shuffle=True,
+                    num_workers=args.n_workers,
+                    pin_memory=args.gpu,
+                )
+
+                test_labels = []
+                test_spike_record = torch.zeros(
+                    len(valid_dataset), args.time, args.n_neurons
+                )
+                t0 = time()
+                for test_step, test_batch in enumerate(valid_dataloader):
+                    # Prep next input batch.
+                    inpts = {"X": test_batch["encoded_image"]}
+                    if args.gpu:
+                        inpts = {k: v.cuda() for k, v in inpts.items()}
+
+                    # Run the network on the input (inference mode).
+                    network.run(inpts=inpts, time=args.time, one_step=args.one_step)
+
+                    # Add to spikes recording.
+                    s = spikes["Y"].get("s").permute((1, 0, 2))
+                    test_spike_record[
+                        (test_step * args.test_batch_size) : (
+                            test_step * args.test_batch_size
+                        )
+                        + s.size(0)
+                    ] = s
+
+                    # Plot simulation data.
+                    if args.valid_plot:
+                        input_exc_weights = network.connections["X", "Y"].w
+                        square_weights = get_square_weights(
+                            input_exc_weights.view(784, args.n_neurons), n_sqrt, 28
+                        )
+                        spikes_ = {layer: spikes[layer].get("s")[:, 0] for layer in
+                                   spikes}
+                        spike_ims, spike_axes = plot_spikes(
+                            spikes_, ims=spike_ims, axes=spike_axes
+                        )
+                        weights_im = plot_weights(square_weights, im=weights_im)
+
+                        plt.pause(1e-8)
+
+                    # Reset state variables.
+                    network.reset_()
+
+                    test_labels.extend(test_batch["label"].tolist())
+
+                t1 = time() - t0
+
+                writer.add_scalar(
+                    tag="time/test", scalar_value=t1, global_step=global_step
+                )
+
+                # Convert the list of labels into a tensor.
+                test_label_tensor = torch.tensor(test_labels)
 
                 # Get network predictions.
                 all_activity_pred = all_activity(
-                    spikes=spike_record, assignments=assignments, n_labels=n_classes
+                    spikes=test_spike_record,
+                    assignments=assignments,
+                    n_labels=n_classes,
                 )
                 proportion_pred = proportion_weighting(
-                    spikes=spike_record,
+                    spikes=test_spike_record,
                     assignments=assignments,
                     proportions=proportions,
                     n_labels=n_classes,
                 )
 
                 writer.add_scalar(
-                    tag="accuracy/all vote",
-                    scalar_value=torch.mean(
-                        (label_tensor.long() == all_activity_pred).float()
+                    tag="accuracy/valid/all vote",
+                    scalar_value=100
+                    * torch.mean(
+                        (test_label_tensor.long() == all_activity_pred).float()
                     ),
                     global_step=global_step,
                 )
                 writer.add_scalar(
-                    tag="accuracy/proportion weighting",
-                    scalar_value=torch.mean(
-                        (label_tensor.long() == proportion_pred).float()
-                    ),
+                    tag="accuracy/valid/proportion weighting",
+                    scalar_value=100
+                    * torch.mean((test_label_tensor.long() == proportion_pred).float()),
                     global_step=global_step,
                 )
 
@@ -172,6 +238,33 @@ def main(args):
                     dataformats="HWC",
                 )
 
+                # Convert the array of labels into a tensor
+                label_tensor = torch.tensor(labels)
+
+                # Get network predictions.
+                all_activity_pred = all_activity(
+                    spikes=spike_record, assignments=assignments, n_labels=n_classes
+                )
+                proportion_pred = proportion_weighting(
+                    spikes=spike_record,
+                    assignments=assignments,
+                    proportions=proportions,
+                    n_labels=n_classes,
+                )
+
+                writer.add_scalar(
+                    tag="accuracy/train/all vote",
+                    scalar_value=100
+                    * torch.mean((label_tensor.long() == all_activity_pred).float()),
+                    global_step=global_step,
+                )
+                writer.add_scalar(
+                    tag="accuracy/train/proportion weighting",
+                    scalar_value=100
+                    * torch.mean((label_tensor.long() == proportion_pred).float()),
+                    global_step=global_step,
+                )
+
                 # Assign labels to excitatory layer neurons.
                 assignments, proportions, rates = assign_labels(
                     spikes=spike_record,
@@ -179,6 +272,9 @@ def main(args):
                     n_labels=n_classes,
                     rates=rates,
                 )
+
+                # Re-enable learning.
+                network.train(True)
 
                 labels = []
 
@@ -189,10 +285,14 @@ def main(args):
             if args.gpu:
                 inpts = {k: v.cuda() for k, v in inpts.items()}
 
-            # Run the network on the input.
+            # Run the network on the input (training mode).
             t0 = time()
             network.run(inpts=inpts, time=args.time, one_step=args.one_step)
             t1 = time() - t0
+
+            writer.add_scalar(
+                tag="time/train/step", scalar_value=t1, global_step=global_step
+            )
 
             # Add to spikes recording.
             s = spikes["Y"].get("s").permute((1, 0, 2))
@@ -201,10 +301,6 @@ def main(args):
                 % update_interval : (step * args.batch_size % update_interval)
                 + s.size(0)
             ] = s
-
-            writer.add_scalar(
-                tag="time/simulation", scalar_value=t1, global_step=global_step
-            )
 
             # Plot simulation data.
             if args.plot:
@@ -230,6 +326,7 @@ def parse_args():
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--n-neurons", type=int, default=100)
     parser.add_argument("--batch-size", type=int, default=16)
+    parser.add_argument("--test-batch-size", type=int, default=250)
     parser.add_argument("--reduction", type=str, default="sum")
     parser.add_argument("--n-epochs", type=int, default=1)
     parser.add_argument("--n-workers", type=int, default=-1)
@@ -241,6 +338,7 @@ def parse_args():
     parser.add_argument("--intensity", type=float, default=128)
     parser.add_argument("--progress-interval", type=int, default=10)
     parser.add_argument("--plot", action="store_true")
+    parser.add_argument("--valid-plot", action="store_true")
     parser.add_argument("--gpu", action="store_true")
     parser.add_argument("--one-step", action="store_true")
     return parser.parse_args()
