@@ -132,6 +132,9 @@ def main(args):
             # Run the network on the input.
             network.run(inpts=inpts, time=args.time, input_time_dim=0)
 
+            # Decay learning rate.
+            network.connections["X", "Y"].nu[1] *= 0.99
+
             # Optionally plot various simulation information.
             if args.plot:
                 weights = conv_conn.w

@@ -171,8 +171,9 @@ def main(args):
                         square_weights = get_square_weights(
                             input_exc_weights.view(784, args.n_neurons), n_sqrt, 28
                         )
-                        spikes_ = {layer: spikes[layer].get("s")[:, 0] for layer in
-                                   spikes}
+                        spikes_ = {
+                            layer: spikes[layer].get("s")[:, 0] for layer in spikes
+                        }
                         spike_ims, spike_axes = plot_spikes(
                             spikes_, ims=spike_ims, axes=spike_axes
                         )
