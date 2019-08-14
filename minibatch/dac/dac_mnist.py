@@ -160,6 +160,11 @@ def main(args):
                     ),
                     global_step=global_step,
                 )
+                writer.add_scalar(
+                    tag="spikes/mean",
+                    scalar_value=torch.mean(torch.sum(spike_record, dim=1)),
+                    global_step=global_step,
+                )
 
                 square_weights = get_square_weights(
                     network.connections["X", "Y"].w.view(784, args.n_neurons),
