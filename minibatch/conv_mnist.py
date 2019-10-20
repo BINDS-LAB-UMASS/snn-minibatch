@@ -18,6 +18,21 @@ from bindsnet.network.nodes import DiehlAndCookNodes, Input
 from bindsnet.network.topology import Conv2dConnection, Connection
 
 
+def process_variance_buffers(variance_buffers):
+    for k in variance_buffers.keys():
+        print("Variance statistics ", k)
+        vb = variance_buffers[k]
+        variance = (
+            vb["sum_squares"] - (vb["sum"] * vb["sum"]) / float(vb["count"])
+        ) / float(vb["count"])
+
+        mean = vb['sum'] / float(vb['count'])
+
+        print("Mean update %f" % mean.mean())
+        print("Mean of variance %f" % variance.mean())
+        print("Variance of variance %f" % variance.std())
+
+
 def max_without_indices(inputs, dim=0):
     return torch.max(inputs, dim=dim)[0]
 
@@ -127,7 +142,7 @@ def main(args):
         variance_buffers = {}
         for k in network.connections.keys():
             variance_buffers[k] = {}
-            variance_buffers[k]["prev"] = network.connections[k].w
+            variance_buffers[k]["prev"] = network.connections[k].w.clone()
             variance_buffers[k]["sum"] = torch.zeros_like(
                 variance_buffers[k]["prev"], dtype=torch.double
             )
@@ -147,12 +162,15 @@ def main(args):
 
             # manually compute the total update from this run
             for k in network.connections.keys():
-                cur = network.connections[k].w
+                cur = network.connections[k].w.clone()
                 weight_update = (cur - variance_buffers[k]["prev"]).double()
                 variance_buffers[k]["sum"] += weight_update
                 variance_buffers[k]["sum_squares"] += weight_update * weight_update
                 variance_buffers[k]["count"] += 1
                 variance_buffers[k]["prev"] = cur
+
+            if step % 1000 == 999:
+                process_variance_buffers(variance_buffers)
 
             # Decay learning rate.
             network.connections["X", "Y"].nu[1] *= 0.99
@@ -171,19 +189,7 @@ def main(args):
         % (args.n_epochs, args.n_epochs, time() - start)
     )
     print("Training complete.\n")
-
-    for k in network.connections.keys():
-        print("Variance statistics ", k)
-        vb = variance_buffers[k]
-        variance = (
-            vb["sum_squares"] - (vb["sum"] * vb["sum"]) / float(vb["count"])
-        ) / float(vb["count"])
-
-        mean = vb['sum'] / float(vb['count'])
-
-        print("Mean update %f" % mean.mean())
-        print("Mean of variance %f" % variance.mean())
-        print("Variance of variance %f" % variance.std())
+    process_variance_buffers(variance_buffers)
 
 
 def parse_args():
