@@ -29,8 +29,11 @@ def process_variance_buffers(variance_buffers):
         mean = vb['sum'] / float(vb['count'])
 
         print("Mean update %f" % mean.mean())
+        print("Min of variance %f" % variance.min())
+        print("Max of variance %f" % variance.max())
         print("Mean of variance %f" % variance.mean())
         print("Variance of variance %f" % variance.std())
+
 
 
 def max_without_indices(inputs, dim=0):
