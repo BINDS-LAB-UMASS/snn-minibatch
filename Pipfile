@@ -7,8 +7,8 @@ verify_ssl = true
 
 [packages]
 torch = "*"
-bindsnet = {editable = true,path = "/home/dan/code/bindsnet"}
 tb-nightly = "*"
+bindsnet = { git = 'https://github.com/Hananel-Hazan/bindsnet', editable = true }
 future = "*"
 tensorflow = "==2.0.0b1"
 PyQt5 = "*"
