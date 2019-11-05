@@ -199,7 +199,7 @@ def main(args):
 
             # Run the network on the input.
             t0 = time()
-            network.run(inpts=inpts, time=args.time, one_step=args.one_step)
+            network.run(inputs=inpts, time=args.time, one_step=args.one_step)
             t1 = time() - t0
 
             # Add to spikes recording.
@@ -229,7 +229,7 @@ def main(args):
                 plt.pause(1e-8)
 
             # Reset state variables.
-            network.reset_()
+            network.reset_state_variables()
 
 
 def parse_args():
